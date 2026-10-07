@@ -339,7 +339,8 @@ function ConvertToJobDialog({ estimate }: { estimate: Estimate }) {
   const [hours, setHours] = useState(() => {
     // Prefill from the estimate's labor hours, if it has any.
     const laborHours = estimate.items.filter((i) => i.kind === "labor").reduce((sum, i) => sum + i.quantity, 0);
-    return laborHours > 0 ? String(laborHours) : "";
+    // Round away float noise (0.1 + 0.2 shows as 0.30000000000000004).
+    return laborHours > 0 ? String(Math.round(laborHours * 100) / 100) : "";
   });
   const [saving, setSaving] = useState(false);
 

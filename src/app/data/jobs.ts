@@ -23,6 +23,7 @@ function toJob(row: JobRow): Job {
     notes: row.notes ?? '',
     // The job address defaults to the customer's.
     address: row.address ?? row.customers?.address ?? '',
+    ownAddress: row.address ?? '',
     estimateId: row.estimate_id,
     createdAt: row.created_at,
   };

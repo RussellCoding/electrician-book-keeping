@@ -58,7 +58,10 @@ export interface Job {
   description: string;
   /** Internal notes for the crew (not shown to the customer). */
   notes: string;
+  /** Where the work is: the job's own address, or the customer's when it has none. */
   address: string;
+  /** The job's own address only ('' when it uses the customer's). Edit forms use this. */
+  ownAddress: string;
   /** The estimate this job was converted from, if any. */
   estimateId: string | null;
   createdAt: string;

@@ -42,7 +42,9 @@ function toEstimate(row: EstimateRow, totals?: Views<'estimate_totals'>): Estima
   };
 }
 
-const roundCents = (n: number) => Math.round(n * 100) / 100;
+// Like Postgres round(numeric, 2): half a cent rounds up. toPrecision strips
+// float noise first (1.005 * 100 is 100.49999999999999 in JS, not 100.5).
+const roundCents = (n: number) => Math.round(Number((n * 100).toPrecision(12))) / 100;
 
 /** quantity x unitPrice rounded to cents, the same way the estimate_totals view does. */
 export function lineTotal(quantity: number, unitPrice: number): number {
@@ -130,7 +132,10 @@ export async function createEstimate(shopId: string, input: NewEstimate): Promis
   );
   if (error) {
     // Two inserts aren't atomic from the browser; don't leave an empty estimate behind.
-    await supabase.from('estimates').delete().eq('id', id);
+    const cleanup = await supabase.from('estimates').delete().eq('id', id).select('id');
+    if (cleanup.error || cleanup.data?.length !== 1) {
+      throw new Error(`${error.message}. An empty draft estimate may have been left behind.`);
+    }
     throw new Error(error.message);
   }
   return id;

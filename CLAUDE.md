@@ -186,6 +186,11 @@ Not recommended yet: error monitoring (Sentry or similar) until there are real u
 - Schedule and date inputs use the browser's time zone, not the shop's `timezone` setting.
 - Revenue (dashboard, customer totals) is the agreed price of completed jobs until invoices exist.
 - There's no "cancel job" action.
+- `listScheduleEvents` loads every job and filters open, scheduled ones in the browser. Filter in the query (`status in (scheduled, in-progress)`, `scheduled_at is not null`).
+- The customer pickers in `CreateEstimateDialog` and `CreateJobDialog` use `listCustomers`, which also hits the `customer_summaries` view. Add a light `listCustomerNames` (id, name).
+- Customer cards on the Customers page draw the email, phone and address rows even when they're empty. CustomerDetail already shows placeholders.
+- `SignIn`, `QueryState` and the `ShopProvider` cards hardcode Tailwind colors (`bg-blue-600`, `bg-gray-50`) instead of theme tokens, as do most Figma Make pages.
+- Job status and priority badge colors are duplicated in `Jobs.tsx`, `JobDetail.tsx`, `CustomerDetail.tsx` and `Dashboard.tsx`. Move them next to `labelFor` in `data/types.ts`.
 
 ## Conventions
 

@@ -371,7 +371,7 @@ function EditJobForm({ job, onDone }: { job: Job; onDone: () => void }) {
   const [priority, setPriority] = useState<JobPriority>(job.priority);
   const [scheduledAt, setScheduledAt] = useState(toDateTimeInputValue(job.scheduledDate));
   const [hours, setHours] = useState(job.estimatedHours === null ? "" : String(job.estimatedHours));
-  const [address, setAddress] = useState(job.address);
+  const [address, setAddress] = useState(job.ownAddress);
   const [description, setDescription] = useState(job.description);
   const [notes, setNotes] = useState(job.notes);
   const [saving, setSaving] = useState(false);
