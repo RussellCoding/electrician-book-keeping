@@ -1,5 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { Layout } from "./components/Layout";
+import { RequireAuth } from "./auth/RequireAuth";
+import { SignIn } from "./pages/SignIn";
 import { Dashboard } from "./pages/Dashboard";
 import { Customers } from "./pages/Customers";
 import { CustomerDetail } from "./pages/CustomerDetail";
@@ -11,9 +13,15 @@ import { AIAssistant } from "./pages/AIAssistant";
 import { NotFound } from "./pages/NotFound";
 
 export const router = createBrowserRouter([
+  { path: "/sign-in", Component: SignIn },
   {
     path: "/",
-    Component: Layout,
+    // Every app page needs a session and a shop.
+    element: (
+      <RequireAuth>
+        <Layout />
+      </RequireAuth>
+    ),
     children: [
       { index: true, Component: Dashboard },
       { path: "customers", Component: Customers },

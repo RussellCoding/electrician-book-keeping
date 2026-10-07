@@ -1,109 +1,145 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import {
-  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  Clock
+  Clock,
+  Plus,
 } from "lucide-react";
-import { mockScheduleEvents } from "../data/mockData";
+import { listScheduleEvents } from "../data/jobs";
+import { useAsync } from "../data/useAsync";
+import { useShop } from "../auth/ShopProvider";
+import { QueryState } from "../components/QueryState";
+import { CreateJobDialog } from "../components/CreateJobDialog";
+import { labelFor, type ScheduleEvent } from "../data/types";
+import { isSameDay, isSameMonth } from "../format";
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+const TYPE_COLORS: Record<string, string> = {
+  installation: 'bg-blue-100 text-blue-700 border-blue-300',
+  repair: 'bg-red-100 text-red-700 border-red-300',
+  maintenance: 'bg-green-100 text-green-700 border-green-300',
+  inspection: 'bg-purple-100 text-purple-700 border-purple-300',
+  upgrade: 'bg-orange-100 text-orange-700 border-orange-300',
+};
+const DOT_COLORS: Record<string, string> = {
+  installation: 'bg-blue-500',
+  repair: 'bg-red-500',
+  maintenance: 'bg-green-500',
+  inspection: 'bg-purple-500',
+  upgrade: 'bg-orange-500',
+};
+const getTypeColor = (type: string) => TYPE_COLORS[type] ?? 'bg-gray-100 text-gray-700 border-gray-300';
+
+const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+function startOfWeek(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay());
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+/** The Sunday-to-Saturday weeks that cover the month containing `date`. */
+function monthGrid(date: Date): Date[] {
+  const first = new Date(date.getFullYear(), date.getMonth(), 1);
+  const last = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  const start = startOfWeek(first);
+  const days: Date[] = [];
+  for (let d = start; d <= last || d.getDay() !== 0; d = addDays(d, 1)) days.push(d);
+  return days;
+}
 
 export function Schedule() {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [selectedDay, setSelectedDay] = useState(() => new Date());
   const [view, setView] = useState<'week' | 'month'>('week');
+  const { shop } = useShop();
+  const { data: scheduleEvents, error, reload } = useAsync(() => listScheduleEvents(shop.id), [shop.id]);
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'installation': return 'bg-blue-100 text-blue-700 border-blue-300';
-      case 'repair': return 'bg-red-100 text-red-700 border-red-300';
-      case 'maintenance': return 'bg-green-100 text-green-700 border-green-300';
-      case 'inspection': return 'bg-purple-100 text-purple-700 border-purple-300';
-      case 'upgrade': return 'bg-orange-100 text-orange-700 border-orange-300';
-      default: return 'bg-gray-100 text-gray-700 border-gray-300';
-    }
-  };
+  if (!scheduleEvents) return <QueryState error={error} onRetry={reload} />;
 
-  const getWeekDays = () => {
-    const start = new Date(currentDate);
-    start.setDate(start.getDate() - start.getDay()); // Start from Sunday
+  const today = new Date();
+  const getEventsForDate = (date: Date) =>
+    // filter() returns a new array, so sorting it doesn't touch the loaded data.
+    scheduleEvents
+      .filter((event) => isSameDay(event.start, date))
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
 
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(start);
-      day.setDate(start.getDate() + i);
-      days.push(day);
-    }
-    return days;
-  };
-
-  const weekDays = getWeekDays();
-
-  const getEventsForDate = (date: Date) => {
-    return mockScheduleEvents.filter(event => {
-      const eventDate = new Date(event.start);
-      return eventDate.toDateString() === date.toDateString();
-    });
-  };
-
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
-    setCurrentDate(newDate);
+  const navigate = (direction: 1 | -1) => {
+    const next =
+      view === 'week'
+        ? addDays(currentDate, 7 * direction)
+        : new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1);
+    setCurrentDate(next);
+    if (view === 'month') setSelectedDay(next);
   };
 
   const goToToday = () => {
     setCurrentDate(new Date());
+    setSelectedDay(new Date());
   };
 
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(currentDate), i));
+  const weekStart = weekDays[0];
+  const weekEnd = weekDays[6];
+  const title =
+    view === 'month'
+      ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      : `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekEnd.toLocaleDateString('en-US', {
+          month: weekStart.getMonth() === weekEnd.getMonth() ? undefined : 'short',
+          day: 'numeric',
+        })}, ${weekEnd.getFullYear()}`;
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Schedule</h1>
-          <p className="text-gray-500 mt-1">Manage your job calendar</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Schedule</h1>
+          <p className="text-gray-500 mt-1">Open jobs by scheduled time</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={goToToday}>Today</Button>
-          <Button>
-            <CalendarIcon className="w-4 h-4 mr-2" />
-            Add to Calendar
-          </Button>
-        </div>
+        <CreateJobDialog
+          onCreated={reload}
+          trigger={
+            <Button className="h-11">
+              <Plus className="w-4 h-4" />
+              New job
+            </Button>
+          }
+        />
       </div>
 
       {/* Calendar Controls */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" onClick={() => navigateWeek('prev')}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" className="size-11 shrink-0" onClick={() => navigate(-1)} aria-label={`Previous ${view}`}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <h2 className="text-xl font-semibold text-gray-900">
-                {MONTHS[weekDays[0].getMonth()]} {weekDays[0].getDate()} - {MONTHS[weekDays[6].getMonth()]} {weekDays[6].getDate()}, {weekDays[0].getFullYear()}
-              </h2>
-              <Button variant="outline" size="sm" onClick={() => navigateWeek('next')}>
+              <h2 className="flex-1 text-center text-lg sm:text-xl font-semibold text-gray-900 sm:min-w-56">{title}</h2>
+              <Button variant="outline" size="icon" className="size-11 shrink-0" onClick={() => navigate(1)} aria-label={`Next ${view}`}>
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={view === 'week' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setView('week')}
-              >
+            <div className="grid grid-cols-3 sm:flex gap-2">
+              <Button variant="outline" className="h-11" onClick={goToToday}>Today</Button>
+              <Button variant={view === 'week' ? 'default' : 'outline'} className="h-11" onClick={() => setView('week')}>
                 Week
               </Button>
               <Button
                 variant={view === 'month' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setView('month')}
+                className="h-11"
+                onClick={() => {
+                  setView('month');
+                  setSelectedDay(currentDate);
+                }}
               >
                 Month
               </Button>
@@ -112,49 +148,29 @@ export function Schedule() {
         </CardContent>
       </Card>
 
-      {/* Week View */}
+      {/* Week View: stacked days on phones, 7 columns from xl up (the sidebar eats ~270px) */}
       {view === 'week' && (
-        <div className="grid grid-cols-7 gap-4">
-          {weekDays.map((day, index) => {
+        <div className="grid grid-cols-1 xl:grid-cols-7 gap-3">
+          {weekDays.map((day) => {
             const events = getEventsForDate(day);
-            const isToday = day.toDateString() === new Date().toDateString();
+            const isToday = isSameDay(day, today);
 
             return (
-              <Card key={index} className={isToday ? 'ring-2 ring-blue-600' : ''}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-center">
-                    <div className="text-sm text-gray-500">{DAYS[day.getDay()]}</div>
-                    <div className={`text-2xl font-bold mt-1 ${
-                      isToday ? 'text-blue-600' : 'text-gray-900'
-                    }`}>
+              <Card key={day.toISOString()} className={`gap-0 ${isToday ? 'ring-2 ring-blue-600' : ''}`}>
+                <CardHeader className="pb-2 xl:pb-3">
+                  <CardTitle className="flex items-baseline gap-2 xl:flex-col xl:items-center xl:gap-0">
+                    <span className="text-sm text-gray-500">{DAYS[day.getDay()]}</span>
+                    <span className={`text-lg xl:text-2xl font-bold xl:mt-1 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+                      <span className="xl:hidden">{day.toLocaleDateString('en-US', { month: 'short' })} </span>
                       {day.getDate()}
-                    </div>
+                    </span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-2 pb-4">
                   {events.length === 0 ? (
-                    <p className="text-xs text-gray-400 text-center py-4">No jobs</p>
+                    <p className="text-xs text-gray-400 xl:text-center xl:py-4">No jobs</p>
                   ) : (
-                    events.map((event) => (
-                      <div
-                        key={event.id}
-                        className={`p-2 rounded-lg border ${getTypeColor(event.type)}`}
-                      >
-                        <div className="text-xs font-medium truncate">
-                          {event.title}
-                        </div>
-                        <div className="flex items-center gap-1 mt-1 text-xs opacity-75">
-                          <Clock className="w-3 h-3" />
-                          {event.start.toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                        <div className="text-xs mt-1 truncate">
-                          {event.customerName}
-                        </div>
-                      </div>
-                    ))
+                    events.map((event) => <EventChip key={event.id} event={event} />)
                   )}
                 </CardContent>
               </Card>
@@ -163,52 +179,98 @@ export function Schedule() {
         </div>
       )}
 
-      {/* Month View (List) */}
+      {/* Month View: calendar grid; tap a day to list its jobs */}
       {view === 'month' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>All Scheduled Jobs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {mockScheduleEvents
-                .sort((a, b) => a.start.getTime() - b.start.getTime())
-                .map((event) => (
-                  <div key={event.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="w-16 text-center">
+        <>
+          <Card>
+            <CardContent className="p-2 sm:p-4">
+              <div className="grid grid-cols-7 text-center text-xs font-medium text-gray-500 mb-1">
+                {DAYS.map((d) => <div key={d} className="py-1">{d}</div>)}
+              </div>
+              <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded-md overflow-hidden">
+                {monthGrid(currentDate).map((day) => {
+                  const events = getEventsForDate(day);
+                  const inMonth = isSameMonth(day, currentDate);
+                  const isToday = isSameDay(day, today);
+                  const isSelected = isSameDay(day, selectedDay);
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      type="button"
+                      onClick={() => setSelectedDay(day)}
+                      aria-label={`${day.toDateString()}, ${events.length} job${events.length === 1 ? '' : 's'}`}
+                      aria-pressed={isSelected}
+                      className={`min-h-14 md:min-h-24 p-1 md:p-1.5 text-left align-top flex flex-col gap-1 transition-colors ${
+                        inMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'
+                      } ${isSelected ? 'ring-2 ring-inset ring-blue-600' : 'hover:bg-blue-50'}`}
+                    >
+                      <span
+                        className={`text-xs md:text-sm w-6 h-6 flex items-center justify-center rounded-full ${
+                          isToday ? 'bg-blue-600 text-white font-semibold' : ''
+                        }`}
+                      >
+                        {day.getDate()}
+                      </span>
+                      {/* Phones: one dot per job. */}
+                      {events.length > 0 && (
+                        <span className="flex flex-wrap gap-0.5 md:hidden">
+                          {events.slice(0, 4).map((e) => (
+                            <span key={e.id} className={`w-1.5 h-1.5 rounded-full ${DOT_COLORS[e.type] ?? 'bg-gray-500'}`} />
+                          ))}
+                        </span>
+                      )}
+                      {/* Wider screens: job titles. */}
+                      <span className="hidden md:flex flex-col gap-0.5 w-full">
+                        {events.slice(0, 3).map((e) => (
+                          <span key={e.id} className={`text-[11px] leading-tight truncate rounded px-1 border ${getTypeColor(e.type)}`}>
+                            {formatTime(e.start)} {e.title}
+                          </span>
+                        ))}
+                        {events.length > 3 && <span className="text-[11px] text-gray-500">+{events.length - 3} more</span>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {selectedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {getEventsForDate(selectedDay).length === 0 ? (
+                <p className="text-sm text-gray-500">No jobs scheduled this day.</p>
+              ) : (
+                getEventsForDate(selectedDay).map((event) => (
+                  <Link
+                    key={event.id}
+                    to={`/jobs/${event.jobId}`}
+                    className="flex items-center gap-4 p-3 sm:p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <div className="w-16 shrink-0 text-center">
+                      <div className="font-medium text-gray-900">{formatTime(event.start)}</div>
                       <div className="text-sm text-gray-500">
-                        {event.start.toLocaleDateString('en-US', { month: 'short' })}
-                      </div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        {event.start.getDate()}
+                        {+((event.end.getTime() - event.start.getTime()) / (1000 * 60 * 60)).toFixed(2)}h
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h4 className="font-medium text-gray-900">{event.title}</h4>
-                        <Badge className={getTypeColor(event.type)}>
-                          {event.type}
-                        </Badge>
+                        <Badge className={getTypeColor(event.type)}>{labelFor(event.type)}</Badge>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">{event.customerName}</p>
-                      <p className="text-sm text-gray-500 mt-1">{event.address}</p>
+                      {event.address && <p className="text-sm text-gray-500 mt-1 truncate">{event.address}</p>}
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium text-gray-900">
-                        {event.start.toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {Math.round((event.end.getTime() - event.start.getTime()) / (1000 * 60 * 60))}h
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {/* Legend */}
@@ -218,29 +280,28 @@ export function Schedule() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-blue-100 border border-blue-300"></div>
-              <span className="text-sm text-gray-700">Installation</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-red-100 border border-red-300"></div>
-              <span className="text-sm text-gray-700">Repair</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-green-100 border border-green-300"></div>
-              <span className="text-sm text-gray-700">Maintenance</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-purple-100 border border-purple-300"></div>
-              <span className="text-sm text-gray-700">Inspection</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-orange-100 border border-orange-300"></div>
-              <span className="text-sm text-gray-700">Upgrade</span>
-            </div>
+            {Object.entries(TYPE_COLORS).map(([type, color]) => (
+              <div key={type} className="flex items-center gap-2">
+                <div className={`w-4 h-4 rounded border ${color}`}></div>
+                <span className="text-sm text-gray-700">{labelFor(type)}</span>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function EventChip({ event }: { event: ScheduleEvent }) {
+  return (
+    <Link to={`/jobs/${event.jobId}`} className={`block p-2 rounded-lg border ${getTypeColor(event.type)} hover:opacity-80`}>
+      <div className="text-sm xl:text-xs font-medium truncate">{event.title}</div>
+      <div className="flex items-center gap-1 mt-1 text-xs opacity-75">
+        <Clock className="w-3 h-3" />
+        {formatTime(event.start)}
+      </div>
+      <div className="text-xs mt-1 truncate">{event.customerName}</div>
+    </Link>
   );
 }

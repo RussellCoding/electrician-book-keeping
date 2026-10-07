@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -27,7 +28,7 @@ export function AIAssistant() {
     {
       id: '1',
       role: 'assistant',
-      content: "Hello! I'm your AI assistant for ElectroCRM. I can help you with scheduling, customer insights, estimate generation, and business optimization. What would you like help with today?",
+      content: "The AI assistant isn't connected yet. When it is, it will draft estimates, follow-ups and schedule suggestions from your shop's records, and nothing goes out without your approval.",
       timestamp: new Date(),
       suggestions: [
         "Analyze my revenue trends",
@@ -84,55 +85,38 @@ export function AIAssistant() {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: getAIResponse(input),
+        content: getAIResponse(),
         timestamp: new Date()
       };
       setMessages(prev => [...prev, aiMessage]);
-    }, 1000);
+    }, 300);
 
     setInput("");
   };
 
-  const getAIResponse = (query: string): string => {
-    const lowerQuery = query.toLowerCase();
+  // No model is connected yet. Say so instead of making up an answer.
+  const getAIResponse = (): string =>
+    "The assistant isn't connected to an AI model yet, so I can't answer that. " +
+    "Once it is, I'll draft estimates, follow-ups and schedule suggestions from your shop's records for you to review and approve.";
 
-    if (lowerQuery.includes('revenue') || lowerQuery.includes('income')) {
-      return "Based on your revenue data, I see a strong upward trend! Your revenue has increased by 12.5% over the last month to $32,000. The main growth drivers are:\n\n1. Commercial installations (+40%)\n2. Electrical upgrades (+25%)\n3. New customer acquisitions\n\nRecommendation: Focus marketing on commercial properties and panel upgrades, as these have the highest profit margins.";
-    }
-
-    if (lowerQuery.includes('schedule') || lowerQuery.includes('calendar')) {
-      return "I've analyzed your schedule for optimal efficiency. Here are my recommendations:\n\n1. Group jobs by location to reduce travel time (could save 4 hours/week)\n2. Schedule maintenance jobs on Mondays/Fridays when emergency calls are lower\n3. You have capacity for 2 more jobs next week\n\nWould you like me to suggest specific time slots for your pending estimates?";
-    }
-
-    if (lowerQuery.includes('estimate') || lowerQuery.includes('quote')) {
-      return "I can help generate an estimate! For a typical electrical panel upgrade:\n\n• 200A Panel: $850\n• Circuit Breakers (8x 20A): $360\n• Labor (6 hours @ $125/hr): $750\n• Permit & Inspection: $350\n• Subtotal: $2,310\n• Tax (8%): $184.80\n• Total: $2,494.80\n\nThis is based on your historical pricing. Would you like to adjust any items or create a custom estimate?";
-    }
-
-    if (lowerQuery.includes('customer')) {
-      return "Looking at your customer data:\n\n• Johnson Residence is due for maintenance (8 months since last service)\n• Springfield Mall shows high satisfaction and regularly approves add-on work\n• 3 customers haven't scheduled follow-ups in 6+ months\n\nRecommendation: Send a seasonal maintenance reminder to inactive customers with a 10% discount to boost retention.";
-    }
-
-    return "I'd be happy to help with that! I can assist you with:\n\n• Revenue analysis and forecasting\n• Smart scheduling and route optimization\n• Generating detailed estimates\n• Customer insights and retention\n• Business growth recommendations\n\nWhat specific area would you like to explore?";
-  };
+  const notConnected = () => toast.info("The AI assistant isn't connected yet.");
 
   const handleSuggestionClick = (suggestion: string) => {
     setInput(suggestion);
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
             <Sparkles className="w-8 h-8 text-purple-600" />
             AI Assistant
           </h1>
-          <p className="text-gray-500 mt-1">Your intelligent business partner</p>
+          <p className="text-gray-500 mt-1">Coming soon: drafts you review and approve</p>
         </div>
-        <Badge className="bg-purple-100 text-purple-700 border-purple-300">
-          Powered by AI
-        </Badge>
+        <Badge variant="outline">Not connected yet</Badge>
       </div>
 
       {/* Quick Actions */}
@@ -140,7 +124,14 @@ export function AIAssistant() {
         {quickActions.map((action, index) => {
           const Icon = action.icon;
           return (
-            <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card
+              key={index}
+              role="button"
+              tabIndex={0}
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={notConnected}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && notConnected()}
+            >
               <CardContent className="pt-6">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${action.color} mb-3`}>
                   <Icon className="w-6 h-6" />
@@ -239,7 +230,7 @@ export function AIAssistant() {
       {/* AI Capabilities */}
       <Card>
         <CardHeader>
-          <CardTitle>What I Can Do</CardTitle>
+          <CardTitle>What It Will Do (planned)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

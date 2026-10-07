@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -13,16 +13,24 @@ import {
   Mail,
   MapPin
 } from "lucide-react";
-import { mockCustomers } from "../data/mockData";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
-import { Label } from "../components/ui/label";
+import { listCustomers } from "../data/customers";
+import { useAsync } from "../data/useAsync";
+import { useShop } from "../auth/ShopProvider";
+import { QueryState } from "../components/QueryState";
+import { CustomerFormDialog } from "../components/CustomerFormDialog";
+import { formatMoney } from "../format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 
 export function Customers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  const { shop } = useShop();
+  const navigate = useNavigate();
+  const { data: customers, error, reload } = useAsync(() => listCustomers(shop.id), [shop.id]);
 
-  const filteredCustomers = mockCustomers.filter(customer => {
+  if (!customers) return <QueryState error={error} onRetry={reload} />;
+
+  const filteredCustomers = customers.filter(customer => {
     const matchesSearch = customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          customer.phone.includes(searchQuery);
@@ -31,57 +39,22 @@ export function Customers() {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Customers</h1>
           <p className="text-gray-500 mt-1">Manage your customer relationships</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Customer
+        <CustomerFormDialog
+          onSaved={(id) => navigate(`/customers/${id}`)}
+          trigger={
+            <Button className="h-11">
+              <Plus className="w-4 h-4" />
+              Add customer
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Customer</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Customer Name</Label>
-                <Input id="name" placeholder="Enter customer name" />
-              </div>
-              <div>
-                <Label htmlFor="type">Type</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="residential">Residential</SelectItem>
-                    <SelectItem value="commercial">Commercial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="customer@email.com" />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" placeholder="(555) 123-4567" />
-              </div>
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" placeholder="Enter full address" />
-              </div>
-              <Button className="w-full">Create Customer</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          }
+        />
       </div>
 
       {/* Filters */}
@@ -94,11 +67,11 @@ export function Customers() {
                 placeholder="Search customers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-11"
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 h-11">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
@@ -160,7 +133,7 @@ export function Customers() {
                   <div className="text-right">
                     <div className="text-gray-500">Revenue</div>
                     <div className="font-semibold text-gray-900">
-                      ${customer.totalRevenue.toLocaleString()}
+                      {formatMoney(customer.totalRevenue)}
                     </div>
                   </div>
                 </div>
@@ -173,7 +146,7 @@ export function Customers() {
       {filteredCustomers.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-gray-500">No customers found matching your search.</p>
+            <p className="text-gray-500">{customers.length === 0 ? "No customers yet. Tap Add customer to add one." : "No customers found matching your search."}</p>
           </CardContent>
         </Card>
       )}
