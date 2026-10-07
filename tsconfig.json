@@ -13,7 +13,8 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@db-types": ["server/src/database.types.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]
