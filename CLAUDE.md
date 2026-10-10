@@ -14,7 +14,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-An agentic AI CRM for small, local electrical contractors (owner-operators and shops with roughly 1–15 people). Working name: **ElectroCRM**.
+A learning project. Its main purpose is to teach the owner how to **train a specialized AI model using a larger AI model as its teacher**: generating synthetic training data, checking its quality, fine-tuning a small open model, measuring it against a baseline, and running it inside a real app. That work lives in `ml/` (see "Job scoper model (`ml/`)" below).
+
+- **Explain as you go.** The owner is learning, so when working on `ml/`, say what each step does and why (what the teacher, checks, split, baseline or training run is for), and point out what to look for in results. Show real numbers from runs; never present a score without saying what it measures.
+- **Be honest about results.** Scores on the synthetic test set measure agreement with the teacher, not real-world accuracy. Say so whenever results are reported.
+
+The application the model serves is ElectroCRM: an agentic AI CRM for small, local electrical contractors (owner-operators and shops with roughly 1–15 people).
 
 The users are electricians, not office staff. They work from a truck or a job site, often on a phone, and don't want to do data entry. The product is useful only if it takes paperwork off their plate. That means estimates, scheduling, follow-ups, and invoicing.
 
@@ -50,7 +55,9 @@ Build these in this order. Each one is a tool the agent calls, and each tool's o
 
 ## Agent plan: Groq (not set up yet)
 
-A plan to tackle later. Nothing is installed or configured: no package, no env var, no routes.
+A plan to tackle later. Nothing is installed or configured in `server/`: no package, no env var, no routes. (Groq is already used in `ml/` as the teacher model for training data; that's separate from the app's agent.)
+
+For "estimate from description", the target is the fine-tuned job scoper from `ml/` plus its pricing engine, not a general Groq model: the scoper produces the scope, and prices come from the shop's own rates and price list. It can be served by Ollama, which has an OpenAI-compatible API, so the `chat()` module below works for it unchanged. A general Groq model stays the plan for the other capabilities (follow-up messages, scheduling suggestions).
 
 - **Provider:** Groq's free tier. Ask before switching providers or adding a second one.
 - **Where it runs:** only on the Hono server (`server/`). The key goes in `server/.env` as `GROQ_API_KEY`, with the model id in `GROQ_MODEL`. Add both to `server/.env.example` and `server/src/env.ts` when this is built. Never call Groq from the browser and never put the key in a `VITE_` var.
