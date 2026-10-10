@@ -23,7 +23,57 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "customers": {
+            "agent_drafts": {
+                  Row: {
+                    "applied_at": string | null,"created_at": string,"customer_id": string | null,"decided_at": string | null,"decided_by": string | null,"estimate_id": string | null,"id": string,"job_id": string | null,"kind": Database["public"]['Enums']["agent_draft_kind"],"payload": NonNullable<Json>,"reason": string | null,"requested_by": string | null,"result": Json | null,"shop_id": string,"status": Database["public"]['Enums']["agent_draft_status"],"summary": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "applied_at"?: string | null,"created_at"?: string,"customer_id"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"estimate_id"?: string | null,"id"?: string,"job_id"?: string | null,"kind": Database["public"]['Enums']["agent_draft_kind"],"payload": NonNullable<Json>,"reason"?: string | null,"requested_by"?: string | null,"result"?: Json | null,"shop_id": string,"status"?: Database["public"]['Enums']["agent_draft_status"],"summary": string
+                  }
+                  Update: {
+                    "applied_at"?: string | null,"created_at"?: string,"customer_id"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"estimate_id"?: string | null,"id"?: string,"job_id"?: string | null,"kind"?: Database["public"]['Enums']["agent_draft_kind"],"payload"?: NonNullable<Json>,"reason"?: string | null,"requested_by"?: string | null,"result"?: Json | null,"shop_id"?: string,"status"?: Database["public"]['Enums']["agent_draft_status"],"summary"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "agent_drafts_customer_id_shop_id_fkey"
+      columns: ["customer_id","shop_id"]
+isOneToOne: false
+      referencedRelation: "customer_summaries"
+      referencedColumns: ["customer_id","shop_id"]
+    },{
+      foreignKeyName: "agent_drafts_customer_id_shop_id_fkey"
+      columns: ["customer_id","shop_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["id","shop_id"]
+    },{
+      foreignKeyName: "agent_drafts_estimate_id_shop_id_fkey"
+      columns: ["estimate_id","shop_id"]
+isOneToOne: false
+      referencedRelation: "estimate_totals"
+      referencedColumns: ["estimate_id","shop_id"]
+    },{
+      foreignKeyName: "agent_drafts_estimate_id_shop_id_fkey"
+      columns: ["estimate_id","shop_id"]
+isOneToOne: false
+      referencedRelation: "estimates"
+      referencedColumns: ["id","shop_id"]
+    },{
+      foreignKeyName: "agent_drafts_job_id_shop_id_fkey"
+      columns: ["job_id","shop_id"]
+isOneToOne: false
+      referencedRelation: "jobs"
+      referencedColumns: ["id","shop_id"]
+    },{
+      foreignKeyName: "agent_drafts_shop_id_fkey"
+      columns: ["shop_id"]
+isOneToOne: false
+      referencedRelation: "shops"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"customers": {
                   Row: {
                     "address": string | null,"created_at": string,"email": string | null,"id": string,"name": string,"notes": string | null,"phone": string | null,"shop_id": string,"status": Database["public"]['Enums']["customer_status"],"type": Database["public"]['Enums']["customer_type"]
                   }
@@ -213,7 +263,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "convert_estimate_to_job":
+            "approve_agent_draft":
+{ Args: { "p_customer_id"?: string,"p_draft_id": string }; Returns: Json
+                           },
+"convert_estimate_to_job":
 { Args: { "p_estimate_id": string,"p_estimated_hours"?: number,"p_scheduled_at"?: string,"p_type": Database["public"]['Enums']["job_type"] }; Returns: string
                            },
 "create_shop":
@@ -224,10 +277,13 @@ isOneToOne: false
                            },
 "is_shop_owner":
 { Args: { "p_shop_id": string }; Returns: boolean
+                           },
+"reject_agent_draft":
+{ Args: { "p_draft_id": string }; Returns: undefined
                            }
           }
           Enums: {
-            "customer_status": "active"|"inactive","customer_type": "residential"|"commercial","estimate_status": "draft"|"sent"|"approved"|"rejected","job_priority": "low"|"medium"|"high"|"urgent","job_status": "scheduled"|"in-progress"|"completed"|"cancelled","job_type": "installation"|"repair"|"maintenance"|"inspection"|"upgrade","line_item_kind": "material"|"labor"|"permit"|"other","shop_role": "owner"|"tech"
+            "agent_draft_kind": "estimate"|"message"|"schedule-change"|"materials-list"|"invoice","agent_draft_status": "proposed"|"approved"|"rejected"|"applied"|"failed","customer_status": "active"|"inactive","customer_type": "residential"|"commercial","estimate_status": "draft"|"sent"|"approved"|"rejected","job_priority": "low"|"medium"|"high"|"urgent","job_status": "scheduled"|"in-progress"|"completed"|"cancelled","job_type": "installation"|"repair"|"maintenance"|"inspection"|"upgrade","line_item_kind": "material"|"labor"|"permit"|"other","shop_role": "owner"|"tech"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -347,7 +403,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "customer_status": ["active", "inactive"],"customer_type": ["residential", "commercial"],"estimate_status": ["draft", "sent", "approved", "rejected"],"job_priority": ["low", "medium", "high", "urgent"],"job_status": ["scheduled", "in-progress", "completed", "cancelled"],"job_type": ["installation", "repair", "maintenance", "inspection", "upgrade"],"line_item_kind": ["material", "labor", "permit", "other"],"shop_role": ["owner", "tech"]
+            "agent_draft_kind": ["estimate", "message", "schedule-change", "materials-list", "invoice"],"agent_draft_status": ["proposed", "approved", "rejected", "applied", "failed"],"customer_status": ["active", "inactive"],"customer_type": ["residential", "commercial"],"estimate_status": ["draft", "sent", "approved", "rejected"],"job_priority": ["low", "medium", "high", "urgent"],"job_status": ["scheduled", "in-progress", "completed", "cancelled"],"job_type": ["installation", "repair", "maintenance", "inspection", "upgrade"],"line_item_kind": ["material", "labor", "permit", "other"],"shop_role": ["owner", "tech"]
           }
         }
 } as const

@@ -95,6 +95,38 @@ insert into estimate_items (shop_id, estimate_id, kind, description, quantity, u
   ('50000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000003', 'labor', 'Labor', 16, 125, 3);
 
 -- ---------------------------------------------------------------------------
+-- Agent drafts. A hand-written example of what the estimate tool will
+-- propose, so the approval flow has something to show before a model is
+-- connected. Labor uses the shop's $125/hr rate.
+-- ---------------------------------------------------------------------------
+
+insert into agent_drafts (id, shop_id, kind, status, payload, summary, reason, customer_id, requested_by, created_at) values
+  ('d0000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001',
+   'estimate', 'proposed',
+   jsonb_build_object(
+     'title', '200A Panel Upgrade',
+     'description', 'Replace 100A panel with 200A service, new meter base and grounding.',
+     'valid_until', to_char(current_date + 30, 'YYYY-MM-DD'),
+     'tax_rate', null,
+     'labor_hours', 8,
+     'items', '[
+       {"kind": "material", "description": "200A main breaker panel, 40 space", "quantity": 1, "unit_price": 285.00},
+       {"kind": "material", "description": "200A meter base", "quantity": 1, "unit_price": 145.00},
+       {"kind": "material", "description": "2/0 aluminum SER cable (ft)", "quantity": 25, "unit_price": 4.20},
+       {"kind": "material", "description": "Ground rod, 8 ft, with clamp", "quantity": 2, "unit_price": 18.50},
+       {"kind": "labor", "description": "Labor - panel and service upgrade", "quantity": 8, "unit_price": 125.00},
+       {"kind": "permit", "description": "Electrical permit and inspection", "quantity": 1, "unit_price": 150.00}
+     ]'::jsonb,
+     'missing', '[
+       {"description": "Utility disconnect/reconnect fee", "reason": "Not in the price list; check with the utility"}
+     ]'::jsonb
+   ),
+   'Demo data: estimate draft for a 200A panel upgrade at Robert Chen''s',
+   'Demo data written by hand for the seed, not by the agent. Prices are placeholders.',
+   'c0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001',
+   now() - interval '1 hour');
+
+-- ---------------------------------------------------------------------------
 -- Jobs. Times are shop-local (America/Chicago).
 -- ---------------------------------------------------------------------------
 

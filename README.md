@@ -58,7 +58,7 @@ A CRM for small electrical contractors (owner-operators and shops of about 1–1
 
 The trained model is meant to power the AI assistant here, turning a short description into a draft estimate built from the shop's own rates. The rule is that **the AI drafts and the human approves**: nothing goes to a customer, gets rebooked or moves money without an explicit click.
 
-**Status:** working prototype. Customers, jobs, estimates, the schedule and the dashboard run against a real database. The AI assistant isn't connected to the model yet. Invoices, permits and job photos aren't built yet.
+**Status:** working prototype. Customers, jobs, estimates, the schedule and the dashboard run against a real database. The AI assistant isn't connected to the model yet. The approval records it will use are in place: AI suggestions are saved as drafts, and only an explicit approve turns one into a real estimate (enforced in the database). Invoices, permits and job photos aren't built yet.
 
 ### What works today
 
@@ -180,7 +180,7 @@ src/
   app/pages/       one file per screen
   app/components/  layout, form dialogs, shadcn/ui primitives in ui/
   app/format.ts    money and date helpers
-server/src/        Hono API: auth middleware, routes
+server/src/        Hono API: auth middleware, routes, agent draft helpers
 supabase/
   migrations/      database schema, row-level security, views, RPCs
   seed.sql         demo shop and data
@@ -194,7 +194,7 @@ Details are in [CLAUDE.md](CLAUDE.md).
 
 - **Model:** grow the dataset to about 500 examples, run the first real training, compare against the baseline, then add hand-checked real jobs to the test set.
 - **Connect the model to the app:** serve it from the Hono server and have it draft estimates for approval, priced by the pricing engine with the shop's own rates.
-- **App schema:** invoices and payments, permits and inspections, job photos, agent drafts, and crew invites.
+- **App schema:** invoices and payments, permits and inspections, job photos, and crew invites.
 - **Tooling:** Vitest, database tests for row-level security, Biome, GitHub Actions CI, and removing unused Figma Make dependencies.
 
 ## Credits
