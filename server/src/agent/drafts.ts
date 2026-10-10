@@ -5,6 +5,8 @@ import type { Db } from '../supabase.ts';
 // toPrecision strips float noise (0.29 * 100 is 28.999999999999996).
 const hasCents = (n: number) => Number.isInteger(Number((n * 100).toPrecision(12)));
 const centsMessage = 'At most 2 decimal places';
+// estimates.tax_rate is numeric(6,4), so the rate the user approves is the rate stored.
+const hasFourDecimals = (n: number) => Number.isInteger(Number((n * 10000).toPrecision(12)));
 
 const estimateDraftItemSchema = z.object({
   kind: z.enum(['material', 'labor', 'permit', 'other']),
@@ -24,7 +26,7 @@ export const estimateDraftPayloadSchema = z.object({
   // YYYY-MM-DD, or null for no expiry.
   valid_until: z.iso.date().nullable(),
   // Fraction (0.08 = 8%), or null to use the shop's rate.
-  tax_rate: z.number().min(0).lt(1).nullable(),
+  tax_rate: z.number().min(0).lt(1).refine(hasFourDecimals, 'At most 4 decimal places').nullable(),
   items: z.array(estimateDraftItemSchema).min(1).max(200),
   // Things that couldn't be priced. Shown to the user, not turned into line items.
   missing: z
