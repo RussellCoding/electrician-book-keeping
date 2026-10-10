@@ -1,0 +1,10 @@
+# Generated data and model outputs; rebuild with the scripts in src/
+data/
+runs/
+# Shop-specific settings and supplier prices
+catalog/shop.json
+catalog/prices.csv
+.venv/
+__pycache__/
+.env
+kaggle_output/

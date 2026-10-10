@@ -1,0 +1,93 @@
+sku,description,unit,category
+WIRE-NM-14-2,NM-B 14/2 with ground (Romex),ft,wire
+WIRE-NM-12-2,NM-B 12/2 with ground (Romex),ft,wire
+WIRE-NM-12-3,NM-B 12/3 with ground (Romex),ft,wire
+WIRE-NM-14-3,NM-B 14/3 with ground (Romex),ft,wire
+WIRE-NM-10-2,NM-B 10/2 with ground (Romex),ft,wire
+WIRE-NM-10-3,NM-B 10/3 with ground (Romex),ft,wire
+WIRE-NM-8-3,NM-B 8/3 with ground (Romex),ft,wire
+WIRE-NM-6-3,NM-B 6/3 with ground (Romex),ft,wire
+WIRE-THHN-12,THHN 12 AWG copper stranded,ft,wire
+WIRE-THHN-10,THHN 10 AWG copper stranded,ft,wire
+WIRE-THHN-6,THHN 6 AWG copper stranded,ft,wire
+WIRE-THHN-4,THHN 4 AWG copper stranded,ft,wire
+WIRE-SER-2/0,SER 2/0-2/0-2/0-1 aluminum service entrance cable,ft,wire
+WIRE-SER-4/0,SER 4/0-4/0-4/0-2/0 aluminum service entrance cable,ft,wire
+WIRE-UF-12-2,UF-B 12/2 with ground direct burial,ft,wire
+WIRE-GEC-4,4 AWG bare copper grounding electrode conductor,ft,wire
+WIRE-LV-LANDSCAPE-12,12/2 low-voltage landscape lighting cable,ft,wire
+COND-EMT-1/2,EMT conduit 1/2 in (10 ft stick),each,conduit
+COND-EMT-3/4,EMT conduit 3/4 in (10 ft stick),each,conduit
+COND-EMT-1,EMT conduit 1 in (10 ft stick),each,conduit
+COND-PVC-3/4,Schedule 40 PVC conduit 3/4 in (10 ft stick),each,conduit
+COND-PVC-1,Schedule 40 PVC conduit 1 in (10 ft stick),each,conduit
+COND-PVC-2,Schedule 80 PVC conduit 2 in (10 ft stick),each,conduit
+COND-FIT-EMT-3/4,EMT set-screw connectors and couplings 3/4 in (pack of 10),each,conduit
+COND-FIT-EMT-1/2,EMT set-screw connectors and couplings 1/2 in (pack of 10),each,conduit
+COND-FIT-EMT-1,EMT set-screw connectors and couplings 1 in (pack of 10),each,conduit
+COND-FIT-PVC-1,PVC fittings and glue kit 1 in,each,conduit
+COND-FIT-PVC-3/4,PVC fittings and glue kit 3/4 in,each,conduit
+COND-FIT-PVC-2,PVC fittings and glue kit 2 in,each,conduit
+COND-STRAP,One-hole conduit straps (pack of 25),each,conduit
+BOX-OLD-1G,Old-work single-gang box,each,box
+BOX-OLD-2G,Old-work two-gang box,each,box
+BOX-NEW-1G,New-work single-gang box,each,box
+BOX-NEW-2G,New-work two-gang box,each,box
+BOX-ROUND-FAN,Fan-rated ceiling box with brace,each,box
+BOX-4SQ,4 in square metal box with mud ring,each,box
+BOX-WP-1G,Weatherproof single-gang box,each,box
+BOX-WP-COVER,In-use weatherproof bubble cover,each,box
+DEV-REC-15,15A duplex receptacle tamper-resistant,each,device
+DEV-REC-20,20A duplex receptacle tamper-resistant,each,device
+DEV-GFCI-20,20A GFCI receptacle,each,device
+DEV-SW-SP,Single-pole switch,each,device
+DEV-SW-3W,Three-way switch,each,device
+DEV-DIMMER,LED-compatible dimmer,each,device
+DEV-REC-1450,NEMA 14-50 receptacle,each,device
+DEV-REC-1430,NEMA 14-30 dryer receptacle,each,device
+DEV-REC-650,NEMA 6-50 receptacle,each,device
+DEV-REC-USB,Duplex receptacle with USB,each,device
+DEV-PLATE,Device wall plate,each,device
+DEV-SMOKE-HW,Hardwired smoke/CO combo alarm,each,device
+DEV-TIMER,In-wall digital timer switch,each,device
+PNL-200-40,200A main breaker load center 40 space,each,panel
+PNL-100-20,100A main breaker load center 20 space,each,panel
+PNL-SUB-100-24,100A main lug subpanel 24 space,each,panel
+PNL-SUB-60-12,60A subpanel 12 space,each,panel
+PNL-METER-200,200A meter base,each,panel
+PNL-MAST-KIT,Service mast kit 2 in with weatherhead,each,panel
+PNL-DISC-60,60A non-fused AC disconnect,each,panel
+PNL-DISC-SPA,60A GFCI spa disconnect,each,panel
+PNL-INTERLOCK,Generator interlock kit,each,panel
+PNL-INLET-50,50A generator power inlet box,each,panel
+PNL-SPD,Whole-house surge protective device,each,panel
+PNL-GROUND-ROD,8 ft copper-clad ground rod with clamp,each,panel
+BRK-1P-15,15A single-pole breaker,each,breaker
+BRK-1P-20,20A single-pole breaker,each,breaker
+BRK-2P-20,20A double-pole breaker,each,breaker
+BRK-2P-30,30A double-pole breaker,each,breaker
+BRK-2P-40,40A double-pole breaker,each,breaker
+BRK-2P-50,50A double-pole breaker,each,breaker
+BRK-2P-60,60A double-pole breaker,each,breaker
+BRK-2P-100,100A double-pole breaker,each,breaker
+BRK-AFCI-20,20A combination AFCI breaker,each,breaker
+BRK-DUAL-20,20A dual-function AFCI/GFCI breaker,each,breaker
+BRK-GFCI-2P-50,50A double-pole GFCI breaker,each,breaker
+LT-CAN-6,6 in LED canless recessed light,each,lighting
+LT-CAN-4,4 in LED canless recessed light,each,lighting
+LT-FLUSH,LED flush-mount ceiling fixture,each,lighting
+LT-FAN,Ceiling fan (customer-supplied mounting hardware),each,lighting
+LT-VANITY,Bathroom vanity light,each,lighting
+LT-EXHAUST,Bathroom exhaust fan 80 CFM,each,lighting
+LT-FLOOD-LED,LED motion floodlight,each,lighting
+LT-UNDERCAB,LED under-cabinet light bar,each,lighting
+LT-LANDSCAPE,Low-voltage landscape path light,each,lighting
+LT-TRANSFORMER,Landscape lighting transformer 300W,each,lighting
+LT-WRAP-4,4 ft LED wraparound fixture,each,lighting
+EV-CHARGER-48,48A Level 2 EV charger (hardwired),each,device
+MISC-WIRENUTS,Wire connectors assortment,each,misc
+MISC-STAPLES,Cable staples (box),each,misc
+MISC-FIRECAULK,Fire-stop caulk tube,each,misc
+MISC-PATCH,Drywall patch kit,each,misc
+MISC-LABELS,Panel directory and labels,each,misc
+MISC-ANTIOX,Anti-oxidant compound,each,misc

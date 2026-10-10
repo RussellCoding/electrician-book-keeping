@@ -1,0 +1,11 @@
+{
+  "_comment": "BLS Producer Price Index series per parts category. Titles checked against https://download.bls.gov/pub/time.series/wp/wp.series. Used to adjust supplier prices for drift since their as_of month; never used as a price on their own.",
+  "wire": { "series": "WPU10260314", "title": "Copper wire and cable" },
+  "conduit": { "series": "WPU11710216", "title": "Noncurrent-carrying electrical conduit and conduit fittings" },
+  "box": { "series": "WPU11710217", "title": "Other noncurrent-carrying wiring devices and supplies (boxes, covers, bar hangers)" },
+  "device": { "series": "WPU117101", "title": "Current-carrying wiring devices" },
+  "panel": { "series": "WPU117522013", "title": "Low voltage panelboards and distribution boards, 1000 volts or less" },
+  "breaker": { "series": "WPU1175", "title": "Switchgear, switchboard, industrial controls equipment" },
+  "lighting": { "series": "WPU1083", "title": "Lighting fixtures" },
+  "misc": { "series": "WPU117102", "title": "Noncurrent-carrying wiring devices" }
+}

@@ -1,5 +1,8 @@
 # ElectroCRM
 
+> **Copyright © 2026 Russell Habib. All rights reserved.**
+> This code is public for viewing only. No permission is granted to copy, modify, distribute, or use it, in whole or in part, without written permission from the author. Third-party components keep their own licenses (see [ATTRIBUTIONS.md](ATTRIBUTIONS.md)).
+
 A CRM for small electrical contractors (owner-operators and shops of about 1–15 people). It's built for electricians working from a truck or a job site on a phone, and its job is to take paperwork off their plate: estimates, scheduling, follow-ups, and invoicing.
 
 The long-term goal is an **agentic** CRM: an AI assistant that drafts estimates, follow-up messages, and schedule changes from the shop's own records. The rule is that **the agent drafts and the human approves**. Nothing goes to a customer, gets rebooked, or moves money without an explicit click.
