@@ -33,7 +33,7 @@ The model decides **what** a job needs. It never produces dollar amounts. Prices
 | Number | Where it comes from |
 | --- | --- |
 | Labor hours, parts, quantities | The model (an estimate, labeled as one) |
-| Electrician wage cost | U.S. Bureau of Labor Statistics wages for the shop's metro area, or the shop's own figure |
+| Electrician wage cost | U.S. Bureau of Labor Statistics wages for the shop's metro area (national if unavailable), or the shop's own figure |
 | Part prices | The shop's supplier prices, adjusted for inflation with BLS price indexes for wire, devices, conduit, panels and more |
 | Labor rate, markup, overhead, tax, permit fee | The shop's settings |
 
@@ -42,9 +42,9 @@ If a part has no price or the wage data is missing, the quote says so instead of
 ## How it's trained: teacher and student
 
 1. **The teacher writes examples.** A large model (`gpt-oss-120b` on Groq's free tier) is given a random job type, building, writing style and complication, and writes a realistic job request plus the scope an experienced electrician would plan. Every example is marked as synthetic.
-2. **Checks catch the teacher's mistakes.** The rules are in the prompt, and code checks every example: every breaker the tasks install is listed, fittings match conduit size, wire footage covers every conductor, interconnected smoke alarms get 3-wire cable, and more. Failures go back to the teacher to fix. Reading batches by hand finds new kinds of mistakes, and those become new checks.
-3. **The student learns on a free GPU.** A small open model (Qwen 2.5 3B) is fine-tuned with QLoRA on Kaggle. The same notebook scores the untrained model first, so every run reports a before and after.
-4. **The result runs locally.** Training exports a 2 GB model file that runs with Ollama on an ordinary laptop or a 6 GB graphics card.
+2. **Checks catch the teacher's mistakes.** The rules are in the prompt, and code checks every example: if a task installs a breaker, a breaker is in the parts list; conduit and fittings match in size; THHN footage is long enough for at least two conductors through the conduit; interconnected smoke alarms and 3-way switches get 3-conductor cable; and more. Failures go back to the teacher to fix. Reading batches by hand finds new kinds of mistakes, and those become new checks.
+3. **The student learns on a free GPU.** A small open model (Qwen 2.5 3B) is fine-tuned with QLoRA on Kaggle. The same notebook runs the untrained model on the test set first, so every run can be scored before and after (full scoring runs locally with `src.evaluate`).
+4. **The result runs locally.** Training exports an about 2 GB model file (Q4_K_M GGUF) that runs with Ollama on an ordinary laptop or a 6 GB graphics card.
 
 **Where it stands:** the whole pipeline works end to end. A dry run trained on Kaggle, scored the baseline, and exported a model. The dataset is growing by about 50 examples a day within the free tier, toward about 500 for the first real training run. The baseline model already writes valid output, but it misses most of the parts a job needs and gets permits wrong, and closing that gap is what training is for.
 
@@ -85,7 +85,7 @@ The trained model is meant to power the AI assistant here, turning a short descr
 
 ### The model pipeline
 
-You need Python 3.11+, a free [Groq](https://console.groq.com) API key, and a free [Kaggle](https://www.kaggle.com) account with phone verification (for GPU access).
+You need Python 3.10+, a free [Groq](https://console.groq.com) API key, and a free [Kaggle](https://www.kaggle.com) account with phone verification (for GPU access).
 
 ```bash
 cd ml && pip install -r requirements.txt
