@@ -118,6 +118,50 @@ export interface ScheduleEvent {
   address: string;
 }
 
+export type AgentDraftKind = 'estimate' | 'message' | 'schedule-change' | 'materials-list' | 'invoice';
+export type AgentDraftStatus = 'proposed' | 'approved' | 'rejected' | 'applied' | 'failed';
+
+/** What an estimate draft will create if approved. */
+export interface EstimateDraftPayload {
+  title: string;
+  description: string | null;
+  /** YYYY-MM-DD, or null for no expiry. Parse with parseLocalDate. */
+  validUntil: string | null;
+  /** Fraction (0.08 = 8%), or null to use the shop's rate. */
+  taxRate: number | null;
+  items: EstimateItemInput[];
+  /** Things the agent couldn't price. Shown to the user, not turned into line items. */
+  missing: { description: string; reason: string }[];
+  laborHours: number | null;
+}
+
+interface AgentDraftBase {
+  id: string;
+  status: AgentDraftStatus;
+  /** One plain line for the list. */
+  summary: string;
+  /** Why the agent suggests it and which records it used ('' if none). */
+  reason: string;
+  customerId: string | null;
+  /** '' when there's no customer yet. */
+  customerName: string;
+  jobId: string | null;
+  /** For an applied estimate draft, the estimate it created. */
+  estimateId: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+  appliedAt: string | null;
+  /** What applying did: the created estimate, the error ('failed'), or null before applying. */
+  result: AgentDraftResult | null;
+}
+
+export type AgentDraftResult = { estimateId: string } | { error: string };
+
+/** Something the agent proposed. Nothing happens until the user approves it. */
+export type AgentDraft =
+  | (AgentDraftBase & { kind: 'estimate'; payload: EstimateDraftPayload })
+  | (AgentDraftBase & { kind: Exclude<AgentDraftKind, 'estimate'>; payload: unknown });
+
 export const JOB_TYPES: JobType[] = ['installation', 'repair', 'maintenance', 'inspection', 'upgrade'];
 export const JOB_PRIORITIES: JobPriority[] = ['low', 'medium', 'high', 'urgent'];
 export const LINE_ITEM_KINDS: LineItemKind[] = ['material', 'labor', 'permit', 'other'];
