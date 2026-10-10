@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy to shop.json and set your own numbers. bill_rate and tax_rate match the CRM's shop settings (labor rate, tax rate). wage_cost_per_hour defaults to the BLS mean for metro_area when null.",
+  "metro_area": "0012420",
+  "bill_rate": 95.0,
+  "wage_cost_per_hour": null,
+  "labor_burden": 0.30,
+  "overhead_per_labor_hour": 18.0,
+  "material_markup": 0.25,
+  "tax_rate": 0.0825,
+  "tax_materials_only": true,
+  "permit_fee": 150.0,
+  "minimum_charge": 150.0
+}
