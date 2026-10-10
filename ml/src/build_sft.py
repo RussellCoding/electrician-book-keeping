@@ -2,8 +2,10 @@
 
     python -m src.build_sft
 
-The split is by a hash of the example id, so it's stable as more rows are
-generated. Writes data/sft/{train,val,test}.jsonl.
+The split is by a hash of the generator seed, so it's stable as more rows are
+generated, and examples from the same seed (e.g. a one-pass and a reviewed
+version of the same job) always land in the same split, so near-duplicates
+can't leak from train into test. Writes data/sft/{train,val,test}.jsonl.
 """
 
 from __future__ import annotations
@@ -21,8 +23,8 @@ RAW = ROOT / "data" / "synthetic" / "raw.jsonl"
 OUT = ROOT / "data" / "sft"
 
 
-def split_for(example_id: str) -> str:
-    bucket = int(hashlib.sha1(example_id.encode()).hexdigest(), 16) % 100
+def split_for(seed: int) -> str:
+    bucket = int(hashlib.sha1(f"seed-{seed}".encode()).hexdigest(), 16) % 100
     return "test" if bucket < 8 else "val" if bucket < 13 else "train"
 
 
@@ -32,7 +34,7 @@ def main() -> None:
     counts: Counter[str] = Counter()
     for line in RAW.read_text(encoding="utf-8").splitlines():
         row = json.loads(line)
-        split = split_for(row["id"])
+        split = split_for(row["seed"])
         example = training_example(row["description"], Scope.model_validate(row["scope"]))
         example["id"] = row["id"]
         example["synthetic"] = row["synthetic"]

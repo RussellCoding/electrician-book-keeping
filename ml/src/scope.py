@@ -64,7 +64,7 @@ def consistency_issues(scope: Scope) -> list[str]:
         for s in skus:
             if s.startswith(f"COND-FIT-{kind}-"):
                 size = s.removeprefix(f"COND-FIT-{kind}-")
-                if not any(c.startswith(f"COND-{kind}-{size}") for c in skus):
+                if f"COND-{kind}-{size}" not in skus:
                     issues.append(f"{s} has no matching {size} {kind} conduit")
             elif s.startswith(f"COND-{kind}-"):
                 size = s.removeprefix(f"COND-{kind}-")

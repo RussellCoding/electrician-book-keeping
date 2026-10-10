@@ -68,7 +68,7 @@ def main() -> None:
 
     areas: list[str | None] = [None, *args.metro]
     wage_ids = {(a, dt): oews_series(a, dt) for a in areas for dt in WAGE_TYPES}
-    raw = fetch([*wage_ids.values(), *(v["series"] for v in ppi.values())], now - 2, now)
+    raw = fetch([*wage_ids.values(), *(v["series"] for v in ppi.values())], now - 9, now)
 
     wages: dict[str, dict] = {}
     for (area, dt), sid in wage_ids.items():

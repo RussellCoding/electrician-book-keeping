@@ -62,20 +62,28 @@ def ape(pred: float, ref: float) -> float:
 
 
 def score(pred_path: Path) -> dict:
+    """Every rate is over the whole test set: a missing or unparseable reply counts as wrong."""
     test = {r["id"]: r for r in load_test()}
-    preds = [json.loads(l) for l in pred_path.read_text(encoding="utf-8").splitlines()]
+    preds: dict[str, str] = {}
+    unknown: list[str] = []
+    for line in pred_path.read_text(encoding="utf-8").splitlines():
+        p = json.loads(line)
+        if p["id"] in test:
+            preds[p["id"]] = p["reply"]
+        else:
+            unknown.append(p["id"])
     known = set(load_catalog())
 
-    n = len(preds)
+    n = len(test)
     parsed = sku_ok = consistent = permit_ok = kind_ok = 0
     hours_ape: list[float] = []
     f1s: list[float] = []
     qty_close: list[float] = []
-    for p in preds:
-        ref = Scope.model_validate(test[p["id"]]["reference"])
+    for example_id, row in test.items():
+        ref = Scope.model_validate(row["reference"])
         try:
-            got = parse_reply(p["reply"])
-        except Exception:
+            got = parse_reply(preds[example_id])
+        except Exception:  # missing (KeyError) or unparseable reply
             f1s.append(0.0)
             continue
         parsed += 1
@@ -93,20 +101,22 @@ def score(pred_path: Path) -> dict:
         f1s.append(2 * prec * rec / (prec + rec) if prec + rec else 0.0)
         qty_close += [float(ape(got_q[s], ref_q[s]) <= 0.25) for s in hit]
 
-    def pct(x: float) -> float:
-        return round(100 * x, 1)
+    def pct(count: float, total: int) -> float:
+        return round(100 * count / total, 1) if total else 0.0
 
     return {
-        "examples": n,
-        "valid_json_and_schema_%": pct(parsed / n) if n else 0,
-        "all_skus_in_catalog_%": pct(sku_ok / parsed) if parsed else 0,
-        "tasks_and_parts_consistent_%": pct(consistent / parsed) if parsed else 0,
-        "materials_f1_%": pct(statistics.mean(f1s)) if f1s else 0,
-        "quantity_within_25%_%": pct(statistics.mean(qty_close)) if qty_close else 0,
-        "labor_hours_median_error_%": pct(statistics.median(hours_ape)) if hours_ape else None,
-        "labor_hours_within_25%_%": pct(statistics.mean(e <= 0.25 for e in hours_ape)) if hours_ape else 0,
-        "permit_correct_%": pct(permit_ok / parsed) if parsed else 0,
-        "job_kind_correct_%": pct(kind_ok / parsed) if parsed else 0,
+        "test_examples": n,
+        "predictions_missing": n - len(preds),
+        "predictions_not_in_test_set": len(unknown),
+        "valid_json_and_schema_%": pct(parsed, n),
+        "all_skus_in_catalog_%": pct(sku_ok, n),
+        "tasks_and_parts_consistent_%": pct(consistent, n),
+        "materials_f1_%": pct(sum(f1s), n),
+        "quantity_within_25%_%": pct(sum(qty_close), len(qty_close)),
+        "labor_hours_median_error_%": round(100 * statistics.median(hours_ape), 1) if hours_ape else None,
+        "labor_hours_within_25%_%": pct(sum(e <= 0.25 for e in hours_ape), n),
+        "permit_correct_%": pct(permit_ok, n),
+        "job_kind_correct_%": pct(kind_ok, n),
     }
 
 

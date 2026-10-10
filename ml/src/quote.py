@@ -30,15 +30,21 @@ def main() -> None:
         scope = Scope.model_validate_json(args.scope.read_text(encoding="utf-8"))
 
     q = quote(scope)
-    print(f"Labor: {q.labor_hours} h at ${q.wage_rate:.2f}/h wage ({q.wage_source})")
+    wage = f"${q.wage_rate:.2f}/h wage" if q.wage_rate is not None else "no wage data"
+    print(f"Labor: {q.labor_hours} h at {wage} ({q.wage_source})")
     for line in q.lines:
         print(f"  {line.quantity:>7g} {line.unit:<4} {line.description:<55} cost ${line.cost:>9.2f}  price ${line.price:>9.2f}")
     if q.missing_prices:
         print(f"  no supplier price: {', '.join(q.missing_prices)}")
     print()
-    print(f"Job budget (your cost):  ${q.budget:,.2f}  = labor ${q.labor_cost:,.2f} + overhead ${q.overhead_cost:,.2f} + parts ${q.material_cost:,.2f} + permit ${q.permit_cost:,.2f}")
-    print(f"Customer price:          ${q.customer_price:,.2f}  = labor ${q.labor_price:,.2f} + parts ${q.material_price:,.2f} + permit ${q.permit_cost:,.2f} + tax ${q.tax:,.2f}")
-    print(f"Margin before tax:       {q.margin:.1%}")
+    tag = "" if q.complete else "  (PARTIAL, see notes)"
+    if q.budget is not None:
+        print(f"Job budget (your cost):  ${q.budget:,.2f}  = labor ${q.labor_cost:,.2f} + overhead ${q.overhead_cost:,.2f} + parts ${q.material_cost:,.2f} + permit ${q.permit_cost:,.2f}{tag}")
+    else:
+        print("Job budget (your cost):  unknown (no wage data)")
+    print(f"Customer price:          ${q.customer_price:,.2f}  = labor ${q.labor_price:,.2f} + parts ${q.material_price:,.2f} + permit ${q.permit_cost:,.2f} + tax ${q.tax:,.2f}{tag}")
+    if q.margin is not None:
+        print(f"Margin before tax:       {q.margin:.1%}{tag}")
     for n in q.notes:
         print(f"note: {n}")
 

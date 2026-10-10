@@ -15,12 +15,10 @@ to train another model before running this at scale.
 from __future__ import annotations
 
 import argparse
-import concurrent.futures as cf
 import hashlib
 import json
 import os
 import random
-import threading
 import time
 from pathlib import Path
 
@@ -127,7 +125,6 @@ DETAILS = [
     "",
 ]
 
-_lock = threading.Lock()
 
 _ASCII = str.maketrans({"‐": "-", "‑": "-", "‒": "-", "–": "-", "—": "-", "‘": "'", "’": "'",
                         "“": '"', "”": '"', "≈": "~", "×": "x", "°": " deg", "…": "...", " ": " "})
@@ -166,8 +163,7 @@ Check it against this list and fix anything wrong:
 
 Reply with ONLY the corrected scope JSON (same format), even if nothing changed."""
 
-_pace_lock = threading.Lock()
-_daily_limit_hit = threading.Event()
+_daily_limit_hit = False
 _tokens_used = 0
 
 
@@ -189,8 +185,12 @@ def _seconds(value: str | None) -> float:
     return total
 
 
+class BadReply(Exception):
+    """The teacher answered, but not with usable content (e.g. a JSON-mode 400)."""
+
+
 def chat(messages: list[dict], temperature: float) -> str:
-    global _tokens_used
+    global _tokens_used, _daily_limit_hit
     base = os.environ["TEACHER_BASE_URL"].rstrip("/")
     headers = {"Authorization": f"Bearer {os.environ.get('TEACHER_API_KEY', '')}"}
     body = {
@@ -202,23 +202,28 @@ def chat(messages: list[dict], temperature: float) -> str:
     if os.environ.get("TEACHER_REASONING_EFFORT"):
         body["reasoning_effort"] = os.environ["TEACHER_REASONING_EFFORT"]
     for attempt in range(20):
-        with _pace_lock:
-            r = requests.post(f"{base}/chat/completions", json=body, headers=headers, timeout=180)
-            # Stay under the per-minute token limit instead of bouncing off it.
-            remaining = r.headers.get("x-ratelimit-remaining-tokens")
-            if remaining is not None and int(remaining) < 4000:
-                time.sleep(_seconds(r.headers.get("x-ratelimit-reset-tokens")) + 0.5)
+        r = requests.post(f"{base}/chat/completions", json=body, headers=headers, timeout=180)
+        # Stay under the per-minute token limit instead of bouncing off it.
+        remaining = r.headers.get("x-ratelimit-remaining-tokens")
+        if remaining is not None and int(remaining) < 4000:
+            time.sleep(_seconds(r.headers.get("x-ratelimit-reset-tokens")) + 0.5)
         if r.status_code == 429 or r.status_code >= 500:
             wait = float(r.headers.get("retry-after") or min(2**attempt * 5, 60))
             if wait > 600:
-                _daily_limit_hit.set()
+                _daily_limit_hit = True
                 raise RuntimeError(f"daily limit reached (retry in {wait / 3600:.1f} h); run again later to continue")
             time.sleep(wait)
             continue
+        if r.status_code == 400:
+            # Groq answers 400 (json_validate_failed) when the model's JSON is malformed in JSON mode.
+            raise BadReply(r.text[:300])
         r.raise_for_status()
         data = r.json()
         _tokens_used += data.get("usage", {}).get("total_tokens", 0)
-        return data["choices"][0]["message"]["content"]
+        content = data["choices"][0]["message"].get("content")
+        if not content:
+            raise BadReply("empty reply")
+        return content
     raise RuntimeError("teacher kept rate-limiting; try again later")
 
 
@@ -232,7 +237,10 @@ def draft(spec: dict, kind: str, known: set[str]) -> tuple[str, Scope] | None:
         {"role": "user", "content": INSTRUCTIONS.format(**spec)},
     ]
     for _ in range(3):
-        text = chat(msgs, temperature=0.9)
+        try:
+            text = chat(msgs, temperature=0.9)
+        except BadReply:
+            continue  # resample; temperature 0.9 makes the next try differ
         try:
             obj = json.loads(text[text.find("{") : text.rfind("}") + 1])
             description = ascii_text(str(obj["description"]).strip())
@@ -254,7 +262,10 @@ def review(description: str, scope: Scope, kind: str, known: set[str]) -> Scope 
         {"role": "user", "content": REVIEW.format(description=description, scope=json.dumps(scope.model_dump(), indent=1))},
     ]
     for _ in range(3):
-        text = chat(msgs, temperature=0.2)
+        try:
+            text = chat(msgs, temperature=0.2)
+        except BadReply:
+            continue
         try:
             reviewed = clean_scope(parse_reply(text), kind)
         except (ValueError, ValidationError) as e:
@@ -269,8 +280,6 @@ def review(description: str, scope: Scope, kind: str, known: set[str]) -> Scope 
 
 
 def make_one(seed: int, known: set[str], do_review: bool) -> dict | None:
-    if _daily_limit_hit.is_set():
-        return None
     rng = random.Random(seed)
     kind, job = rng.choice(JOBS)
     details = DETAILS if job in NO_NEW_WIRING else DETAILS + WIRING_DETAILS
@@ -298,7 +307,6 @@ def make_one(seed: int, known: set[str], do_review: bool) -> dict | None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--n", type=int, default=50)
-    ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--review", action="store_true", help="second teacher pass that checks the scope (about 2x tokens)")
     ap.add_argument("--start-seed", type=int, default=None, help="default: continue after the last seed in raw.jsonl")
     args = ap.parse_args()
@@ -314,27 +322,28 @@ def main() -> None:
             last_seed = max(last_seed, row["seed"])
     start = args.start_seed if args.start_seed is not None else last_seed + 1
 
+    # Sequential on purpose: the free tier's per-minute token limit allows about one request
+    # at a time anyway, and in-order seeds make resuming after the daily limit exact.
     ok = failed = 0
-    with cf.ThreadPoolExecutor(args.workers) as pool, open(OUT, "a", encoding="utf-8") as f:
-        futures = [pool.submit(make_one, s, known, args.review) for s in range(start, start + args.n)]
-        for fut in cf.as_completed(futures):
+    with open(OUT, "a", encoding="utf-8") as f:
+        for seed in range(start, start + args.n):
             try:
-                row = fut.result()
+                row = make_one(seed, known, args.review)
             except Exception as e:  # keep going; one bad request shouldn't lose the batch
-                print(f"error: {e}")
+                print(f"error on seed {seed}: {e}")
                 row = None
+            if _daily_limit_hit:
+                print("stopped early: daily token limit reached. Run again later to continue from this seed.")
+                break
             if row is None or row["id"] in seen:
                 failed += 1
                 continue
-            with _lock:
-                seen.add(row["id"])
-                f.write(json.dumps(row) + "\n")
-                f.flush()
+            seen.add(row["id"])
+            f.write(json.dumps(row) + "\n")
+            f.flush()
             ok += 1
             if ok % 25 == 0:
                 print(f"{ok} written, {failed} failed")
-    if _daily_limit_hit.is_set():
-        print("stopped early: daily token limit reached. Run again after it resets (midnight UTC) to continue.")
     print(f"done: {ok} written, {failed} failed, {_tokens_used:,} tokens ({_tokens_used // max(ok, 1):,} per example) -> {OUT.relative_to(ROOT)}")
 
 

@@ -50,19 +50,20 @@ class PricedLine:
 @dataclass
 class Quote:
     labor_hours: float
-    wage_rate: float
+    wage_rate: float | None
     wage_source: str
-    labor_cost: float
+    labor_cost: float | None  # None when there's no wage data: no cost is better than a made-up one
     overhead_cost: float
     material_cost: float
     permit_cost: float
-    budget: float
+    budget: float | None
     labor_price: float
     material_price: float
     subtotal: float
     tax: float
     customer_price: float
-    margin: float
+    margin: float | None
+    complete: bool  # False when a wage or any part price is missing; totals are then partial
     lines: list[PricedLine] = field(default_factory=list)
     missing_prices: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
@@ -94,15 +95,28 @@ def load_bls(root: Path = ROOT) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
-def ppi_factor(bls: dict | None, category: str, as_of: str) -> float:
-    """Price-index change from the supplier price's month to the latest month."""
+def normalize_month(value: str) -> str | None:
+    """'2026-8' or '2026-08' -> '2026-08'; anything else -> None."""
+    try:
+        year, month = value.strip().split("-")[:2]
+        y, m = int(year), int(month)
+    except ValueError:
+        return None
+    return f"{y:04d}-{m:02d}" if 1 <= m <= 12 else None
+
+
+def ppi_factor(bls: dict | None, category: str, as_of: str) -> tuple[float, str | None]:
+    """Price-index change from the supplier price's month to the latest month.
+    Returns (factor, problem); factor is 1.0 with a problem when no adjustment was possible."""
     if not bls:
-        return 1.0
+        return 1.0, "no BLS data (run src.bls)"
     values: dict[str, float] = bls["ppi"].get(category, {}).get("values", {})
-    if not values or as_of not in values:
-        return 1.0
-    newest = max(values)
-    return values[newest] / values[as_of]
+    month = normalize_month(as_of)
+    if month is None:
+        return 1.0, f"as_of '{as_of}' is not YYYY-MM"
+    if not values or month not in values:
+        return 1.0, f"no {category} price index for {month}"
+    return values[max(values)] / values[month], None
 
 
 def wage_rate(shop: Shop, bls: dict | None) -> tuple[float | None, str]:
@@ -125,22 +139,24 @@ def quote(scope: Scope, shop: Shop | None = None, root: Path = ROOT) -> Quote:
     hours = scope.total_labor_hours()
     wage, wage_source = wage_rate(shop, bls)
     if wage is None:
-        wage = 0.0
-        notes.append("No wage data: set wage_cost_per_hour in shop.json or run src.bls.")
-    labor_cost = hours * wage * (1 + shop.labor_burden)
-    overhead_cost = hours * shop.overhead_per_labor_hour
+        notes.append("No wage data, so no budget or margin: set wage_cost_per_hour in shop.json or run src.bls.")
+    labor_cost = money(hours * wage * (1 + shop.labor_burden)) if wage is not None else None
+    overhead_cost = money(hours * shop.overhead_per_labor_hour)
 
     lines: list[PricedLine] = []
     missing: list[str] = []
+    unadjusted: list[str] = []
     for m in scope.materials:
         part = catalog.get(m.sku)
         price_row = prices.get(m.sku)
         if part is None or price_row is None:
             missing.append(m.sku)
             continue
-        factor = ppi_factor(bls, part["category"], price_row.get("as_of", ""))
+        factor, problem = ppi_factor(bls, part["category"], price_row.get("as_of", ""))
+        if problem:
+            unadjusted.append(f"{m.sku} ({problem})")
         unit_cost = float(price_row["unit_price"]) * factor
-        cost = unit_cost * m.quantity
+        cost = money(unit_cost * m.quantity)
         lines.append(
             PricedLine(
                 sku=m.sku,
@@ -149,42 +165,46 @@ def quote(scope: Scope, shop: Shop | None = None, root: Path = ROOT) -> Quote:
                 unit=part["unit"],
                 unit_cost=money(unit_cost),
                 ppi_factor=round(factor, 4),
-                cost=money(cost),
+                cost=cost,
                 price=money(cost * (1 + shop.material_markup)),
             )
         )
     if missing:
-        notes.append(f"{len(missing)} part(s) have no supplier price; totals exclude them.")
+        notes.append(f"PARTIAL: {len(missing)} part(s) have no supplier price and are left out of every total.")
+    if unadjusted:
+        notes.append("Supplier price not adjusted for inflation: " + "; ".join(unadjusted))
 
-    material_cost = sum(l.cost for l in lines)
-    material_price = sum(l.price for l in lines)
-    permit_cost = shop.permit_fee if scope.permit_required else 0.0
+    # Round each component first, then add, so the shown parts always sum to the shown totals.
+    material_cost = money(sum(l.cost for l in lines))
+    material_price = money(sum(l.price for l in lines))
+    permit_cost = money(shop.permit_fee if scope.permit_required else 0.0)
 
-    labor_price = hours * shop.bill_rate
-    subtotal = labor_price + material_price + permit_cost
+    labor_price = money(hours * shop.bill_rate)
+    subtotal = money(labor_price + material_price + permit_cost)
     if subtotal < shop.minimum_charge:
         notes.append(f"Raised to the shop minimum charge of {shop.minimum_charge:.2f}.")
-        labor_price += shop.minimum_charge - subtotal
-        subtotal = shop.minimum_charge
+        labor_price = money(labor_price + shop.minimum_charge - subtotal)
+        subtotal = money(shop.minimum_charge)
     taxable = material_price if shop.tax_materials_only else subtotal
-    tax = taxable * shop.tax_rate
+    tax = money(taxable * shop.tax_rate)
 
-    budget = labor_cost + overhead_cost + material_cost + permit_cost
+    budget = money(labor_cost + overhead_cost + material_cost + permit_cost) if labor_cost is not None else None
     return Quote(
         labor_hours=round(hours, 2),
         wage_rate=wage,
         wage_source=wage_source,
-        labor_cost=money(labor_cost),
-        overhead_cost=money(overhead_cost),
-        material_cost=money(material_cost),
-        permit_cost=money(permit_cost),
-        budget=money(budget),
-        labor_price=money(labor_price),
-        material_price=money(material_price),
-        subtotal=money(subtotal),
-        tax=money(tax),
+        labor_cost=labor_cost,
+        overhead_cost=overhead_cost,
+        material_cost=material_cost,
+        permit_cost=permit_cost,
+        budget=budget,
+        labor_price=labor_price,
+        material_price=material_price,
+        subtotal=subtotal,
+        tax=tax,
         customer_price=money(subtotal + tax),
-        margin=round((subtotal - budget) / subtotal, 4) if subtotal else 0.0,
+        margin=round((subtotal - budget) / subtotal, 4) if budget is not None and subtotal else None,
+        complete=wage is not None and not missing,
         lines=lines,
         missing_prices=missing,
         notes=notes,
